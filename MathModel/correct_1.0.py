@@ -76,7 +76,7 @@ def total_loss(w):
 
 
 
-# 选择哪组波长
+# 选择哪个波长
 l = 7
 print('lamda = ', 400 + l*10)
 
@@ -86,7 +86,7 @@ LR = 0.001
 
 w_size = 3
 
-# data_x 浓度数据，21种色浆 * 3次取点
+# data_c 浓度数据，21种色浆 * 3次取点
 # data_p 分光反射率数据 size: (1 + 21 * 3) * 31 , 1为基底
 data_c = np.load('data_c.npy')
 data_p = np.load('data_p.npy')
