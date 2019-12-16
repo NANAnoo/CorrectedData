@@ -1,5 +1,4 @@
 import numpy as np
-
 name = np.array(
     ['07H','08','08S','09','09B','09S','10B','12','13','14','15','16','17A','18A','19A','20A-2','23A','2740','2803','2804','2807']
 )
@@ -49,6 +48,7 @@ def math_model(ingredient, model = 'km'):
 
 # return ingredient
 def i_math_model(f, model='km'):
+    #print(f)
     if model == 'km':
         return f - ((f + 1) ** 2 - 1) ** 0.5 + 1
     elif model == 'recip':
@@ -61,7 +61,11 @@ def correct_func(x,w):
     ans = 0
     j = 2
     for i in w:
-        ans += i*x**j
+        if type(x) == type(w):
+            xx = np.array(x**j).reshape(x.size,1)
+            ans += xx.dot(i.reshape(1,31))
+        else:
+            ans += i*x**j
         j+=1
     return ans
 base_f = math_model(data_p[0])
@@ -86,7 +90,7 @@ def corrected_Mix_1(compose,w):
         total_c += compose[i]
     # 这里的scale原本用来防止K/A变成负数，调整后发现可以提升精度
     scale = 0.7
-    return i_math_model(F + correct_func(total_c * scale,w) + base_f)
+    return i_math_model(F + correct_func(total_c* scale ,w) + base_f)
 
 def get_dfs_KM(w):
     dfs = []
@@ -98,10 +102,9 @@ def get_dfs_KM(w):
     return np.array(dfs)
 
 def corrected_Mix(compose,w,dfs):
-    total_c = np.sum(compose) * 0.7
-    compose = compose.reshape(compose.size,1).repeat(31,1)
-    F = np.sum(compose*dfs,0)
-    return i_math_model(F + correct_func(total_c,w) + base_f)
+    total_c = np.sum(compose,1)
+    F = compose.dot(dfs)
+    return i_math_model(F + correct_func(total_c*0.7,w) + base_f)
 
 def corrected_Mix_Recip(compose,w):
     base_f = math_model(data_p[0],'recip')
@@ -113,18 +116,37 @@ def corrected_Mix_Recip(compose,w):
         F += df * compose[i]
         total_c += compose[i]
     # 这里的scale原本用来防止K/A变成负数，调整后发现可以提升精度
-    scale = 0.7
+    scale = 0.5
     return i_math_model(F + correct_func(total_c * scale,w) + base_f,'recip')
 
 def main():
-    com = 0
-    compose = np.array([0.127,0,0,0,0,0,0,0,0,0,0,0.0748,0,0,0,0,0,0.56,0,0,0])
+    # com = 0
+    # compose = np.array([0.127,0,0,0,0,0,0,0,0,0,0,0.0748,0,0,0,0,0,0.56,0,0,0])
     w = np.load('data_w.npy').T
     dfs = get_dfs_KM(w)
 
-    print(np.sum((RealIngredient[com] - corrected_Mix(compose,w,dfs)) ** 2))
+    # print(np.sum((RealIngredient[com] - corrected_Mix(compose,w,dfs)) ** 2))
     # MSE of Ingredient
     # print(np.sum((RealIngredient[com] - corrected_Mix_1(RealCompose[com],w))**2))
     # print(np.sum((RealIngredient[com] - Mix(RealCompose[com]))**2))
+
+
+    dataset_size = 2*30
+    sum = np.random.rand(dataset_size) +0.2
+    a = sum * np.random.rand(dataset_size)
+    sum  -= a
+    b = sum * np.random.rand(dataset_size)
+    concentrations = np.concatenate((a.reshape(dataset_size,1),
+                                     b.reshape(dataset_size,1),
+                                     (sum - b).reshape(dataset_size,1),
+                                     np.zeros((dataset_size,18))),1)
+    for i in range(dataset_size):
+        np.random.shuffle(concentrations[i])
+    reflectance = corrected_Mix(concentrations,w,dfs)
+    np.savez("dataset_Corrected_01", concentrations = concentrations, reflectance = reflectance)
+
+    data = np.load('dataset_Corrected_01.npz')
+    # print(data['concentrations'])
+    # print(data['reflectance'])
 
 main()
