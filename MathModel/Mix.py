@@ -1,14 +1,14 @@
 import numpy as np
 
 name = np.array(
-    ['07H','08','08S','09','09B','09S','10B','12','13','14','15','16','17A','18A','19A','20A-2','23A','2704','2803','2804','2807']
+    ['07H','08','08S','09','09B','09S','10B','12','13','14','15','16','17A','18A','19A','20A-2','23A','2740','2803','2804','2807']
 )
 
 RealCompose = np.array(
     [
         {'07H' :0.127,'2740':0.56,'16':0.0748},
         {'20A-2':0.1491,'2804':0.2241,'08':0.8014},
-        {'2804':0.3364,'GT16':0.7428,'07H':0.0451},
+        {'2804':0.3364,'16':0.7428,'07H':0.0451},
         {'07H':0.3306,'2740':0.1219,'20A-2':0.0615}
     ]
 )
@@ -36,11 +36,12 @@ RealIngredient = np.array(
 data_c = np.load('data_c.npy')
 data_p = np.load('data_p.npy').T
 
-
 # return F
 def math_model(ingredient, model = 'km'):
     if model == 'km':
         return (np.ones_like(ingredient) - ingredient)**2 / (ingredient * 2)
+    elif model == 'recip':
+        return 1.0 / (ingredient + 1.0)
     else:
         print('Sorry no model of that name')
         exit(1)
@@ -50,6 +51,8 @@ def math_model(ingredient, model = 'km'):
 def i_math_model(f, model='km'):
     if model == 'km':
         return f - ((f + 1) ** 2 - 1) ** 0.5 + 1
+    elif model == 'recip':
+        return 1.0 / f - 1.0
     else:
         print('Sorry no model of that name')
         exit(1)
@@ -61,9 +64,9 @@ def correct_func(x,w):
         ans += i*x**j
         j+=1
     return ans
+base_f = math_model(data_p[0])
 
 def Mix(compose):
-    base_f = math_model(data_p[0])
     F = np.zeros_like(base_f)
     for i in compose.keys():
         index = np.argwhere(name == i)[0][0]
@@ -72,25 +75,56 @@ def Mix(compose):
     return i_math_model(F + base_f)
 
 def corrected_Mix_1(compose,w):
-    base_f = math_model(data_p[0])
     F = np.zeros_like(base_f)
     total_c = 0
     for i in compose.keys():
         index = np.argwhere(name == i)[0][0]
-        df = (math_model(data_p[index * 3 + 2]) - base_f - correct_func(data_c[index][1],w)) / data_c[index][1]
-        F += df * compose[i]
+        df = (math_model(data_p[index * 3 + 1]) - base_f - correct_func(data_c[index][0],w)) / data_c[index][0]
+        df += (math_model(data_p[index * 3 + 2]) - base_f - correct_func(data_c[index][1], w)) / data_c[index][1]
+        df += (math_model(data_p[index * 3 + 3]) - base_f - correct_func(data_c[index][2], w)) / data_c[index][2]
+        F += df * compose[i] / 3
         total_c += compose[i]
     # 这里的scale原本用来防止K/A变成负数，调整后发现可以提升精度
     scale = 0.7
     return i_math_model(F + correct_func(total_c * scale,w) + base_f)
 
+def get_dfs_KM(w):
+    dfs = []
+    for i in range(data_c.shape[0]):
+        df = (math_model(data_p[i * 3 + 1]) - base_f - correct_func(data_c[i][0], w)) / data_c[i][0]
+        df += (math_model(data_p[i * 3 + 2]) - base_f - correct_func(data_c[i][1], w)) / data_c[i][1]
+        df += (math_model(data_p[i * 3 + 3]) - base_f - correct_func(data_c[i][2], w)) / data_c[i][2]
+        dfs.append(df / 3)
+    return np.array(dfs)
+
+def corrected_Mix(compose,w,dfs):
+    total_c = np.sum(compose) * 0.7
+    compose = compose.reshape(compose.size,1).repeat(31,1)
+    F = np.sum(compose*dfs,0)
+    return i_math_model(F + correct_func(total_c,w) + base_f)
+
+def corrected_Mix_Recip(compose,w):
+    base_f = math_model(data_p[0],'recip')
+    F = np.zeros_like(base_f)
+    total_c = 0
+    for i in compose.keys():
+        index = np.argwhere(name == i)[0][0]
+        df = (math_model(data_p[index * 3 + 2],'recip') - base_f - correct_func(data_c[index][1],w)) / data_c[index][1]
+        F += df * compose[i]
+        total_c += compose[i]
+    # 这里的scale原本用来防止K/A变成负数，调整后发现可以提升精度
+    scale = 0.7
+    return i_math_model(F + correct_func(total_c * scale,w) + base_f,'recip')
 
 def main():
-    com = 1
+    com = 0
+    compose = np.array([0.127,0,0,0,0,0,0,0,0,0,0,0.0748,0,0,0,0,0,0.56,0,0,0])
     w = np.load('data_w.npy').T
+    dfs = get_dfs_KM(w)
 
+    print(np.sum((RealIngredient[com] - corrected_Mix(compose,w,dfs)) ** 2))
     # MSE of Ingredient
-    print(np.sum((RealIngredient[com] - corrected_Mix_1(RealCompose[com],w))**2))
-    print(np.sum((RealIngredient[com] - Mix(RealCompose[com]))**2))
+    # print(np.sum((RealIngredient[com] - corrected_Mix_1(RealCompose[com],w))**2))
+    # print(np.sum((RealIngredient[com] - Mix(RealCompose[com]))**2))
 
 main()

@@ -1,10 +1,12 @@
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 
 # return F
 def math_model(ingredient, model = 'km'):
     if model == 'km':
         return (np.ones_like(ingredient) - ingredient)**2 / (ingredient * 2)
+    elif model == 'recip':
+        return 1.0 / (ingredient + 1.0)
     else:
         print('Sorry no model of that name')
         exit(1)
@@ -14,6 +16,8 @@ def math_model(ingredient, model = 'km'):
 def i_math_model(f, model='km'):
     if model == 'km':
         return f - ((f + 1) ** 2 - 1) ** 0.5 + 1
+    elif model == 'recip':
+        return 1.0 / f - 1.0
     else:
         print('Sorry no model of that name')
         exit(1)
@@ -117,7 +121,7 @@ for i in range(31):
 
 print(data_w)
 
-np.save('data_w',data_w)
+np.save('data_w_3',data_w)
 
 '''
 # 选择哪个波长
