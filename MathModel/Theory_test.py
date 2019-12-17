@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-w_size = 2
+w_size = 3
 
 data_c = np.load('data_c.npy')
 
@@ -27,7 +27,7 @@ def noice(x, l = 0.1):
 
 # 作为真实误差，形式可以改变，满足error(0) = 0 即可
 def error(x):
-    return -0.15*(x**2 - 2 * x**3)
+    return -1.0/(x + 0.1)*np.sin(np.log(x + 0.1))*x
 
 # 作为修正函数，以多项式表示 Wi* x**(i+1)
 def correct_func(x,w):
@@ -83,9 +83,9 @@ def total_loss(w):
 
 y = fade_f(k,x,0.01)
 
-epoch = 20000
+epoch = 30000
 
-LR = 0.0001
+LR = 0.001
 
 print('total_loss',total_loss(np.zeros(w_size)))
 print(func(y, x, w))

@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 name = np.array(
     ['07H','08','08S','09','09B','09S','10B','12','13','14','15','16','17A','18A','19A','20A-2','23A','2740','2803','2804','2807']
 )
@@ -11,6 +12,7 @@ RealCompose = np.array(
         {'07H':0.3306,'2740':0.1219,'20A-2':0.0615}
     ]
 )
+
 
 RealIngredient = np.array(
     [[0.2869235,0.3562616,0.3648288,0.3690848,0.3720965,0.3743734,0.3748034,0.3726986,0.3670701,0.3595550,
@@ -32,8 +34,48 @@ RealIngredient = np.array(
     ]
 )
 
+# CIE标准照明体D65光源，10°视场
+optical_relevant = np.array([[0.136, 0.667, 1.644, 2.348, 3.463, 3.733, 3.065, 1.934, 0.803, 0.151, 0.036, 0.348, 1.062,
+                              2.192, 3.385, 4.744, 6.069, 7.285, 8.361, 8.537, 8.707, 7.946, 6.463, 4.641, 3.109, 1.848,
+                              1.053, 0.575, 0.275, 0.120, 0.059],
+                             [0.014, 0.069, 0.172, 0.289, 0.560, 0.901, 1.300, 1.831, 2.530, 3.176, 4.337, 5.629, 6.870,
+                              8.112, 8.644, 8.881, 8.583, 7.922, 7.163, 5.934, 5.100, 4.071, 3.004, 2.031, 1.295, 0.741,
+                              0.416, 0.225, 0.107, 0.046, 0.023],
+                             [0.613, 3.066, 7.820, 11.589, 17.755, 20.088, 17.697, 13.025, 7.703, 3.889, 2.056, 1.040,
+                              0.548, 0.282, 0.123, 0.036, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,
+                              0.000, 0.000, 0.000, 0.000, 0.000, 0.000]])
+perfect_white = np.array([[94.83], [100.00], [107.38]])
+
 data_c = np.load('data_c.npy')
 data_p = np.load('data_p.npy').T
+
+def color_diff(reflectance1, reflectance2):
+    tri1 = np.dot(optical_relevant, reflectance1.reshape(31, 1))
+    tri2 = np.dot(optical_relevant, reflectance2.reshape(31, 1))
+
+    lab1 = xyz2lab(tri1)
+    lab2 = xyz2lab(tri2)
+    delta_lab = lab1 - lab2
+
+    diff = (delta_lab[0] ** 2 + delta_lab[1] ** 2 + delta_lab[2] ** 2) ** (1 / 2)
+    return diff
+
+
+def xyz2lab(xyz):
+    r = 0.008856
+    lab = np.zeros(3 * 1)
+
+    if xyz[0] / perfect_white[0] > r and xyz[1] / perfect_white[1] > r and xyz[2] / perfect_white[2] > r:
+        lab[0] = (xyz[1] / perfect_white[1]) ** (1 / 3) * 116 - 16
+        lab[1] = ((xyz[0] / perfect_white[0]) ** (1 / 3) - (xyz[1] / perfect_white[1]) ** (1 / 3)) * 500
+        lab[2] = ((xyz[1] / perfect_white[1]) ** (1 / 3) - (xyz[2] / perfect_white[2]) ** (1 / 3)) * 200
+    else:
+        lab[0] = (xyz[1] / perfect_white[1]) * 903.3
+        lab[1] = (xyz[0] / perfect_white[0] - xyz[1] / perfect_white[1]) * 3893.5
+        lab[2] = (xyz[1] / perfect_white[1] - xyz[2] / perfect_white[2]) * 1557.4
+
+    return lab
+
 
 # return F
 def math_model(ingredient, model = 'km'):
@@ -98,13 +140,13 @@ def get_dfs_KM(w):
         df = (math_model(data_p[i * 3 + 1]) - base_f - correct_func(data_c[i][0], w)) / data_c[i][0]
         df += (math_model(data_p[i * 3 + 2]) - base_f - correct_func(data_c[i][1], w)) / data_c[i][1]
         df += (math_model(data_p[i * 3 + 3]) - base_f - correct_func(data_c[i][2], w)) / data_c[i][2]
-        dfs.append(df / 3)
+        dfs.append(df/3)
     return np.array(dfs)
-
+# use this !!
 def corrected_Mix(compose,w,dfs):
     total_c = np.sum(compose,1)
     F = compose.dot(dfs)
-    return i_math_model(F + correct_func(total_c*0.7,w) + base_f)
+    return i_math_model(F + correct_func(total_c,w)*0.56 + base_f)
 
 def corrected_Mix_Recip(compose,w):
     base_f = math_model(data_p[0],'recip')
@@ -120,19 +162,22 @@ def corrected_Mix_Recip(compose,w):
     return i_math_model(F + correct_func(total_c * scale,w) + base_f,'recip')
 
 def main():
-    # com = 0
-    # compose = np.array([0.127,0,0,0,0,0,0,0,0,0,0,0.0748,0,0,0,0,0,0.56,0,0,0])
+    com = 0
+    compose = np.array([
+        [0.127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0748, 0, 0, 0, 0, 0, 0.56, 0, 0, 0],
+        [0, 0.8014, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1491, 0, 0, 0, 0.2241, 0],
+        [0.0451, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.7428, 0, 0, 0, 0, 0, 0, 0, 0.3364, 0],
+        [0.3306, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0615, 0, 0.1219, 0, 0, 0]
+    ])
     w = np.load('data_w.npy').T
     dfs = get_dfs_KM(w)
 
-    # print(np.sum((RealIngredient[com] - corrected_Mix(compose,w,dfs)) ** 2))
-    # MSE of Ingredient
-    # print(np.sum((RealIngredient[com] - corrected_Mix_1(RealCompose[com],w))**2))
-    # print(np.sum((RealIngredient[com] - Mix(RealCompose[com]))**2))
+    print(color_diff(RealIngredient[com], corrected_Mix(compose,w,dfs)[com]))
+    print(color_diff(RealIngredient[com],Mix(RealCompose[com])))
 
-
-    dataset_size = 2*30
-    sum = np.random.rand(dataset_size) +0.2
+    '''
+    dataset_size = 2**24
+    sum = np.random.rand(dataset_size) + 0.5
     a = sum * np.random.rand(dataset_size)
     sum  -= a
     b = sum * np.random.rand(dataset_size)
@@ -140,13 +185,13 @@ def main():
                                      b.reshape(dataset_size,1),
                                      (sum - b).reshape(dataset_size,1),
                                      np.zeros((dataset_size,18))),1)
-    for i in range(dataset_size):
+    for i in tqdm(range(dataset_size)):
         np.random.shuffle(concentrations[i])
     reflectance = corrected_Mix(concentrations,w,dfs)
     np.savez("dataset_Corrected_01", concentrations = concentrations, reflectance = reflectance)
 
     data = np.load('dataset_Corrected_01.npz')
-    # print(data['concentrations'])
     # print(data['reflectance'])
+    '''
 
 main()
