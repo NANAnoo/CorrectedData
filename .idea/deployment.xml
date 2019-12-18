@@ -2,17 +2,10 @@
 <project version="4">
   <component name="PublishConfigData" autoUpload="Always" serverName="root@125.220.157.101:8022">
     <serverData>
-      <paths name="HP">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/2309/zhang_hao" local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
       <paths name="root@125.220.157.101:8022">
         <serverdata>
           <mappings>
-            <mapping deploy="/tmp/pycharm_project_338" local="$PROJECT_DIR$" />
+            <mapping deploy="/media/root/ed663168-68c7-479f-b550-886a1f95f633/2309/zh" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
