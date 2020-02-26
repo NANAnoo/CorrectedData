@@ -147,6 +147,11 @@ def train(model, train_loader, n_its_per_epoch, zeros_noise_scale, batch_size, n
 
 # 训练模型
 def main():
+    # 文件名字
+    loss_fig_name = 'loss_fig_3'
+    loss_txt_name = 'loss_dir/loss_txt_3.txt'
+    model_name = 'model_dir/model_03'
+
     # 训练轮数
     n_epochs = 3000
 
@@ -164,21 +169,32 @@ def main():
     n_its_per_epoch = 12  # 每次训练12批数据
     batch_size = 1600  # 每批训练1600个样本
     # 用于维度补齐的值
-    y_noise_scale = 3e-2
-    zeros_noise_scale = 3e-2
+    y_noise_scale = 3e-5
+    zeros_noise_scale = 3e-5
     # 损失的权重
-    lambd_predict = 300.  # forward pass
+    lambd_predict = 200.  # forward pass
     lambd_latent = 300.  # latent space
-    lambd_rev = 400.  # backwards pass
+    lambd_rev = 500.  # backwards pass
     # 其它参数
     test_split = 3 * 3  # 用于测试的数据个数
 
+    print()
+    print('---------------------HYPERPARAMETER-------------------')
+    print(' n_epochs      :',n_epochs)
+    print(' lambd_predict :',lambd_predict)
+    print(' lambd_latent  :',lambd_latent)
+    print(' lambd_rev     :',lambd_rev)
+    print(' learning-rate :',lr)
+    print(' gamma         :',gamma)
+    print(' l2_reg        :',l2_reg)
+    print('------------------------------------------------------')
+    print()
     # 获取模型结构
     inn, optimizer, scheduler, loss_backward, loss_latent, loss_fit = model(dim_x, dim_y, dim_z, dim_total,
                                                                             lr=lr, l2_reg=l2_reg, meta_epoch=meta_epoch,
                                                                             gamma=gamma)
     # 读取数据集
-    data = np.load('dataset/data_01.npz')
+    data = np.load('dataset/data_02.npz')
     concentrations = torch.from_numpy(data['concentrations']).float()
     reflectance = torch.from_numpy(data['reflectance']).float()
     # 加载数据
@@ -213,12 +229,12 @@ def main():
             loss_for_list.append(loss_for.item())
             loss_rev_list.append(loss_rev.item())
         # 保存模型
-        torch.save(inn, 'model_dir/model_01')
+        torch.save(inn, model_name)
         # 损失函数画图
         losses=[loss_for_list,loss_rev_list]
-        plot_losses(losses,'loss_01')
+        plot_losses(losses,loss_fig_name)
         # 保存损失函数到文件
-        loss_txt = open('loss_01.txt', 'w+')
+        loss_txt = open(loss_txt_name, 'w+')
         for i in range(n_epochs):
             # 打印损失
             print('epoch:', i, ' loss_for:', loss_for_list[i], ' loss_rev:', loss_rev_list[i],

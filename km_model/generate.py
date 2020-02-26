@@ -66,11 +66,11 @@ def generate(total_data_size, prior_bound=[0, 1], seed=0, model='km'):
 
 
 def main():
-    total_data_size = 10000
+    total_data_size = 2**25
     concentrations, reflectance = generate(total_data_size=total_data_size,prior_bound=[0,1])
     for con in concentrations:
         print(con)
-    np.savez('data_dir\data_01', concentrations=concentrations, reflectance=reflectance)
+    np.savez('data_dir\data_02', concentrations=concentrations, reflectance=reflectance)
     # np.savetxt('dataTxt', concentrations)
 
 
