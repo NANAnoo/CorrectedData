@@ -1,6 +1,8 @@
 import torch
 import torch.utils.data
 import numpy as np
+import sys
+sys.path.append('../')
 import km_model.info as info
 
 from torch import nn

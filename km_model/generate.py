@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../')
+import time
 import numpy as np
 import km_model.info as info
 import torch as torch
@@ -67,7 +70,9 @@ def generate(total_data_size, prior_bound=[0, 1], seed=0, model='km'):
 
 def main():
     total_data_size = 2**25
+    start = time.time()
     concentrations, reflectance = generate(total_data_size=total_data_size,prior_bound=[0,1])
+    print('time-cost',(time.time() - start)/60)
     for con in concentrations:
         print(con)
     np.savez('data_dir\data_02', concentrations=concentrations, reflectance=reflectance)
