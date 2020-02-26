@@ -1,8 +1,13 @@
+import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
+font_set = FontProperties(fname=r"c:\windows\fonts\simsun.ttc", size=12)
 import Math_v2.Functions as mf
 import numpy as np
-
+from collections import Counter
+from tqdm import  tqdm
 RealCompose = np.array(
-    [   [0.127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0748, 0, 0, 0, 0, 0, 0.56, 0, 0, 0],
+    [
+        [0.127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0748, 0, 0, 0, 0, 0, 0.56, 0, 0, 0],
         [0, 0.8014, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1491, 0, 0, 0, 0.2241, 0],
         [0.0451, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.7428, 0, 0, 0, 0, 0, 0, 0, 0.3364, 0],
         [0.3306, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0615, 0, 0.1219, 0, 0, 0]
@@ -10,7 +15,8 @@ RealCompose = np.array(
 )
 
 RealIngredient = np.array(
-    [[0.2869235,0.3562616,0.3648288,0.3690848,0.3720965,0.3743734,0.3748034,0.3726986,0.3670701,0.3595550,
+    [
+     [0.2869235,0.3562616,0.3648288,0.3690848,0.3720965,0.3743734,0.3748034,0.3726986,0.3670701,0.3595550,
       0.3495962,0.3348914,0.3152257,0.2898063,0.2588453,0.2237525,0.1902168,0.1687493,0.1594849,0.1573166,
       0.1543398,0.1508693,0.1542613,0.1652469,0.1817535,0.1943915,0.2001948,0.1974784,0.1753394,0.1711839,
       0.1716521],
@@ -27,6 +33,14 @@ RealIngredient = np.array(
       0.2036385,0.1986061,0.1988262,0.2010616,0.2045918,0.2065673,0.2080161,0.2085742,0.2017922,0.2004079,
       0.1997598]
     ]
+)
+
+# 6 , 12 , 18, 21
+filiters = np.array(
+    [[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0],
+     [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+     [1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1],
+     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
 )
 
 def Mix(compose,data_c,data_p):
@@ -63,42 +77,152 @@ def get_dfs_KM(w,data_c,data_p):
 def corrected_Mix(compose,w,dfs,base_f,scale = 0.56):
     total_c = np.sum(compose,1)
     F = compose.dot(dfs)
-    return mf.i_math_model(F + correct_func(total_c,w)*scale + base_f)
+    correct_F = F + correct_func(total_c*0.78,w)*scale + base_f
+    return mf.i_math_model(correct_F)
+
+def color_diff_by_compose(fil,w_names,scale,data_c,data_p,compose1,compose2):
+    # 按照filiter截取C,P
+    c, p = mf.data_filiter(filiters[fil], data_c, data_p)
+    p = p.T
+
+    base_f = mf.math_model(p[0])
+
+    # 获取w,计算单位k/s值
+    w = np.load(w_names[fil]).T
+    dfs = get_dfs_KM(w, c, p)
+
+    return mf.color_diff(
+        corrected_Mix(np.array([compose1]),w,dfs,base_f,scale[fil]),
+        corrected_Mix(np.array([compose2]),w,dfs,base_f,scale[fil]))
 
 def main():
-    com = 1
-    fil = 1
 
-    scale = 0.56
-    save_name = 'dataset_Corrected_size6'
+    R0 = 0.074
+
+    fil = 3
+
+    scale = [0.515,0.515,0.52,0.8]
+    extend_size = [3,9,15,18]
+    compose_size = [20,220,816,1330]
+
+    save_names = ['dataset_Corrected_size6','dataset_Corrected_size12','dataset_Corrected_size18','dataset_Corrected_size21']
     w_names = [
         'data_w_size6.npy',
         'data_w_size12.npy',
         'data_w_size18.npy',
         'data_w_size21.npy',
     ]
+
     # data_c 浓度数据，21种色浆 * 3次取点
     # data_p 分光反射率数据 size: (1 + 21 * 3) * 31 , 1为基底
     data_c = np.load('data_c.npy')
     data_p = np.load('data_p.npy')
-
-    # 6 , 12 , 18, 21
-    filiters = np.array(
-        [[0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0],
-        [0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1],
-        [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
-    )
-
+    '''
     c, p = mf.data_filiter(filiters[fil], data_c, data_p)
     p = p.T
-    compose = mf.data_filiter_(filiters[fil],RealCompose[com])
 
     base_f = mf.math_model(p[0])
     w = np.load(w_names[fil]).T
+    dfs = get_dfs_KM(w, c, p)
+
+    dataset_size = compose_size[fil] * 2**17
+    sum = np.random.rand(dataset_size)
+    a = sum * np.random.rand(dataset_size)
+    sum  -= a
+    b = sum * np.random.rand(dataset_size)
+    concentrations = np.concatenate((a.reshape(dataset_size,1),
+                                     b.reshape(dataset_size,1),
+                                     (sum - b).reshape(dataset_size,1),
+                                     np.zeros((dataset_size,extend_size[fil]))),1)
+    for i in tqdm(range(dataset_size)):
+        np.random.shuffle(concentrations[i])
+    reflectance = corrected_Mix(concentrations,w,dfs,base_f,scale[fil])
+    np.savez(save_names[fil], concentrations = concentrations, reflectance = reflectance)
+    '''
+
+
+    c, p = mf.data_filiter(filiters[fil], data_c, data_p)
+    p = p.T - R0
+
+    # 计算基底K/S
+    base_f = mf.math_model(p[0])
+        
+    # 获取w,计算单位k/s值
+    w = np.load(w_names[fil]).T
     dfs = get_dfs_KM(w,c,p)
 
-    print(mf.color_diff(RealIngredient[com],corrected_Mix(np.array([compose]),w,dfs,base_f,scale)))
-    print(mf.color_diff(RealIngredient[com],Mix(compose,c,p)))
+    RealCompose_2 = np.load('RealCompose_2.npy')
+    RealIngredient_2 = np.load('RealIngredint_2.npy')
+
+    Composes = np.append(RealCompose,RealCompose_2,axis=0)
+    Ingredients = np.append(RealIngredient,RealIngredient_2,axis=0)
+
+
+    print('\n using : ', w_names[fil])
+
+    Y1 = []
+    Y2 = []
+    Y3 = []
+
+    for com in range (Composes.shape[0]):
+        compose = mf.data_filiter_(filiters[fil], Composes[com])
+        if Counter(compose)[0] == 18:
+            y = mf.color_diff(Ingredients[com],Mix(compose,c,p + R0))
+            if y < 6:
+                Y1.append(y)
+
+            y = mf.color_diff(Ingredients[com],corrected_Mix(np.array([compose]),w,dfs,base_f,scale[fil])+ R0)
+            if y < 6:
+                Y2.append(y)
+
+            y = mf.color_diff(Ingredients[com],Mix(compose,c,p)+ R0)
+            if y < 6:
+                Y3.append(y)
+    #             Y1.append(mf.reflectance2rgb(Ingredients[com]))
+    #             Y2.append(mf.reflectance2rgb(Mix(compose,c,p + R0)))
+    #             Y3.append(mf.reflectance2rgb(corrected_Mix(np.array([compose]),w,dfs,base_f,scale[fil])+ R0))
+    # #
+    # Y1 = np.array(Y1).reshape((21,1,3)) / 100.0
+    # Y2 = np.array(Y2).reshape((21,1,3)) / 100.0
+    # Y3 = np.array(Y3).reshape((21,1,3)) / 100.0
+    # base = np.array(mf.reflectance2rgb(data_p.T[0]))/100.0
+    # print(base)
+    # one = []
+    # for i in range(21):
+    #     one.append(base)
+    # one = np.array(one).reshape((21,1,3))
+    # Y = np.append(Y2,one,axis=1)
+    # Y = np.append(Y, Y1, axis=1)
+    # Y = np.append(Y, one, axis=1)
+    # Y = np.append(Y, Y3, axis=1)
+
+
+
+    plt.figure()
+
+    X = np.arange(len(Y1))
+    plt.scatter(X, Y1,label='KM')
+    plt.plot(X, np.repeat(sum(Y1)/len(Y1),len(Y1)))
+    plt.text(1,sum(Y1)/len(Y1),sum(Y1)/len(Y1))
+
+    plt.scatter(X, Y3, marker='*',label='corrected_KM_1.0')
+    plt.plot(X, np.repeat(sum(Y3)/len(Y3),len(Y3)))
+    plt.text(1, sum(Y3) / len(Y3), sum(Y3) / len(Y3))
+
+    plt.scatter(X, Y2,marker='x',label='corrected_KM_2.0')
+    plt.plot(X, np.repeat(sum(Y2) / len(Y2), len(Y2)))
+    plt.text(1, sum(Y2) / len(Y2), sum(Y2) / len(Y2))
+
+    plt.xlabel('加料方案',fontproperties=font_set)
+    plt.ylabel('色差',fontproperties=font_set)
+
+    # plt.imshow(Y)
+
+    # ignore ticks
+    plt.xticks([])
+    plt.yticks([])
+    plt.legend()
+    plt.show()
+
 
 main()

@@ -12,6 +12,20 @@ optical_relevant = np.array([[0.136, 0.667, 1.644, 2.348, 3.463, 3.733, 3.065, 1
                               0.000, 0.000, 0.000, 0.000, 0.000, 0.000]])
 perfect_white = np.array([[94.83], [100.00], [107.38]])
 
+# lab 色差
+
+def reflectance2rgb(reflectance):
+    tri = np.dot(optical_relevant, reflectance.reshape(31, 1))
+    M = np.array(
+        [[3.240479, -1.537150, -0.498535],
+         [-0.969256, 1.875992, 0.041556],
+         [0.055648, -0.204043, 1.057311]])
+    return M.dot(tri)
+
+def reflectance2lab(reflectance):
+    tri = np.dot(optical_relevant, reflectance.reshape(31, 1))
+    return xyz2lab(tri)
+
 def color_diff(reflectance1, reflectance2):
     tri1 = np.dot(optical_relevant, reflectance1.reshape(31, 1))
     tri2 = np.dot(optical_relevant, reflectance2.reshape(31, 1))
@@ -59,7 +73,7 @@ def i_math_model(f, model='km'):
         print('Sorry no model of that name')
         exit(1)
 
-
+# 根据filiter切分数据
 def data_filiter(filiter,data_C,data_P):
     c = []
     p = [data_P.T[0]]

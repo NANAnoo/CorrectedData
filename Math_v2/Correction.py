@@ -70,20 +70,24 @@ def main():
     epoch = 10000
     LR = 0.001
     w_size = 2
-    save_name = 'data_w_size12'
-    fil = 1
+    fil = 3
+
+    save_name_List = ['data_w_size6','data_w_size12','data_w_size18','data_w_size21_2']
+    save_name = save_name_List[fil]
     # data_c 浓度数据，21种色浆 * 3次取点
     # data_p 分光反射率数据 size: (1 + 21 * 3) * 31 , 1为基底
     data_c = np.load('data_c.npy')
-    data_p = np.load('data_p.npy')
+    data_p = np.load('data_p.npy') - 0.074
 
     # 6 , 12 , 18
     filiters = np.array(
-        [[0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0],
-        [0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1],
-        [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1]]
+        [[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0],
+         [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+         [1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1],
+         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
     )
 
+    # 过滤后的数据
     t_c, t_p = mf.data_filiter(filiters[fil],data_c,data_p)
 
     data_w = []
